@@ -2,9 +2,7 @@ package com.example.newsapp.api;
 
 import android.annotation.SuppressLint;
 
-import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.SSLContext;
-import javax.net.ssl.SSLSession;
 import javax.net.ssl.SSLSocketFactory;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.X509TrustManager;
@@ -57,11 +55,11 @@ public class RetrofitClient {
                     }
             };
 
-            // Install the all-trusting trust manager.
+            /* Install the all-trusting trust manager. */
             final SSLContext sslContext = SSLContext.getInstance("SSL");
             sslContext.init(null, trustAllCertificates, new java.security.SecureRandom());
 
-            // Create an SSL socket factory.
+            /* Create an SSL socket factory. */
             final SSLSocketFactory sslSocketFactory = sslContext.getSocketFactory();
 
             OkHttpClient.Builder builder = new OkHttpClient.Builder();

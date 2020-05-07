@@ -24,7 +24,6 @@ import java.util.List;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 /**
@@ -122,7 +121,7 @@ public class RecyclerViewAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
 
 
     /**
-     * CustomViewHolder for the Article items.
+     * CustomViewHolder to hold Article items.
      */
     public static class CustomViewHolder extends RecyclerView.ViewHolder
             implements View.OnClickListener {

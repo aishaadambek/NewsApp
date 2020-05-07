@@ -23,6 +23,7 @@
 
     <style name="MyAppBarLayoutTheme" parent="Theme.AppCompat.Light.DarkActionBar">
         <item name="colorControlHighlight">@color/colorAccent</item>
+        <item name="colorControlNormal">@color/colorBackground</item>
     </style>
 
 </resources>

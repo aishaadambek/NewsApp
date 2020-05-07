@@ -15,7 +15,7 @@ import java.util.Set;
 
 class Utils {
 
-    // Countries supported by the News API.
+    /* Countries supported by the News API. */
     private static final String[] COUNTRIES = new String[] {
             "ae", "ar", "at", "au", "be", "bg", "br", "ca", "ch", "cn", "co", "cu", "cz", "de",
             "eg", "fr", "gb", "gr", "hk", "hu", "id", "ie", "il", "in", "it", "jp", "kr", "lt",
@@ -24,7 +24,7 @@ class Utils {
     };
     private static final Set<String> COUNTRIES_SET = new HashSet<>(Arrays.asList(COUNTRIES));
     private static final String DEFAULT_COUNTRY = "us";
-    // Random ColorDrawables to be used as placeholders for the Glide's RequestOptions object.
+    /* Random ColorDrawables to be used as placeholders for the Glide's RequestOptions object. */
     private static final ColorDrawable[] colorsList =
             {
                     new ColorDrawable(Color.parseColor("#80d6ff")),

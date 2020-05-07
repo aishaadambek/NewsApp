@@ -37,6 +37,7 @@ public class MainActivity extends AppCompatActivity implements SwipeRefreshLayou
     private NestedScrollView nestedScrollView;
     protected Handler handler;
     private String country;
+    private boolean isLoading;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -46,18 +47,20 @@ public class MainActivity extends AppCompatActivity implements SwipeRefreshLayou
         getDataService = RetrofitClient.getRetrofitClient().create(GetDataService.class);
         country = Utils.getCountry();
         handler = new Handler();
+        isLoading = false;
         nestedScrollView = findViewById(R.id.nestedScrollView);
 
-        // To refresh the news feed upon swiping.
+        /* To refresh the news feed upon swiping. */
         swipeRefreshLayout = findViewById(R.id.swipe_refresh_layout);
         swipeRefreshLayout.setOnRefreshListener(this);
         swipeRefreshLayout.setColorSchemeColors(getResources().getColor(R.color.colorAccent));
 
-        // Set up the Recycler view.
+        /* Set up the Recycler view.*/
         layoutManager = new LinearLayoutManager(MainActivity.this);
         recyclerView = findViewById(R.id.recyclerView);
         recyclerView.setLayoutManager(layoutManager);
         recyclerView.setItemAnimator(new DefaultItemAnimator());
+        // As RecyclerView is within the NestedScrollView
         recyclerView.setNestedScrollingEnabled(false);
 
         onLoadingSwipeRefresh();
@@ -135,7 +138,11 @@ public class MainActivity extends AppCompatActivity implements SwipeRefreshLayou
             View view = nestedScrollView.getChildAt(nestedScrollView.getChildCount() - 1);
 
             int diff = (view.getBottom() - (nestedScrollView.getHeight() + nestedScrollView.getScrollY()));
-            if (diff == 0) {
+            if (!isLoading && diff == 0) {
+                isLoading = true;
+                articles.add(null);
+                adapter.notifyItemInserted(articles.size() - 1);
+
                 handler.postDelayed(() -> {
                     int end = articles.size() + 10;
 
@@ -146,15 +153,17 @@ public class MainActivity extends AppCompatActivity implements SwipeRefreshLayou
                         public void onResponse(Call<News> call, Response<News> response) {
                             assert response.body() != null;
                             if (response.isSuccessful() && response.body().getArticles() != null) {
-                                articles.clear();
+                                articles.remove(articles.size() - 1);
+                                adapter.notifyItemRemoved(articles.size());
 
+                                articles.clear();
                                 List<Article> responseArticles = response.body().getArticles();
                                 if (end < responseArticles.size()) {
                                     responseArticles = responseArticles.subList(0, end);
                                 }
-
                                 articles.addAll(responseArticles);
                                 adapter.notifyDataSetChanged();
+                                isLoading = false;
                             } else {
                                 Toast.makeText(MainActivity.this, "Error. No news results!", Toast.LENGTH_SHORT).show();
                             }
