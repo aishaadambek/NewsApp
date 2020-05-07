@@ -1,6 +1,7 @@
 package com.example.newsapp;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.widget.NestedScrollView;
 import androidx.recyclerview.widget.DefaultItemAnimator;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -11,7 +12,8 @@ import retrofit2.Response;
 
 import android.content.Intent;
 import android.os.Bundle;
-import android.widget.ImageView;
+import android.os.Handler;
+import android.view.View;
 import android.widget.Toast;
 
 import com.example.newsapp.api.RetrofitClient;
@@ -26,15 +28,25 @@ public class MainActivity extends AppCompatActivity implements SwipeRefreshLayou
 
     public static final String API_KEY = "b1f0f77f1ed4414ca169864b76443923";
 
-    private RecyclerView recyclerView;
-    private Adapter adapter;
     private List<Article> articles = new ArrayList<>();
     private SwipeRefreshLayout swipeRefreshLayout;
+    private RecyclerView recyclerView;
+    private RecyclerViewAdapter adapter;
+    private LinearLayoutManager layoutManager;
+    private GetDataService getDataService;
+    private NestedScrollView nestedScrollView;
+    protected Handler handler;
+    private String country;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        getDataService = RetrofitClient.getRetrofitClient().create(GetDataService.class);
+        country = Utils.getCountry();
+        handler = new Handler();
+        nestedScrollView = findViewById(R.id.nestedScrollView);
 
         // To refresh the news feed upon swiping.
         swipeRefreshLayout = findViewById(R.id.swipe_refresh_layout);
@@ -42,7 +54,7 @@ public class MainActivity extends AppCompatActivity implements SwipeRefreshLayou
         swipeRefreshLayout.setColorSchemeColors(getResources().getColor(R.color.colorAccent));
 
         // Set up the Recycler view.
-        RecyclerView.LayoutManager layoutManager = new LinearLayoutManager(MainActivity.this);
+        layoutManager = new LinearLayoutManager(MainActivity.this);
         recyclerView = findViewById(R.id.recyclerView);
         recyclerView.setLayoutManager(layoutManager);
         recyclerView.setItemAnimator(new DefaultItemAnimator());
@@ -53,21 +65,18 @@ public class MainActivity extends AppCompatActivity implements SwipeRefreshLayou
 
     @Override
     public void onRefresh() {
-        loadNewsArticles();
+        populateData();
     }
 
     private void onLoadingSwipeRefresh() {
-        swipeRefreshLayout.post(this::loadNewsArticles);
+        swipeRefreshLayout.post(this::populateData);
     }
 
     /**
-     * Loads news articles by making a GET request to the News API.
+     * Initially loads news articles by making a GET request to the News API.
      */
-    public void loadNewsArticles() {
+    public void populateData() {
         swipeRefreshLayout.setRefreshing(true);
-
-        GetDataService getDataService = RetrofitClient.getRetrofitClient().create(GetDataService.class);
-        String country = Utils.getCountry();
 
         Call<News> call;
         call = getDataService.getNews(country, API_KEY);
@@ -79,24 +88,23 @@ public class MainActivity extends AppCompatActivity implements SwipeRefreshLayou
                     if (!articles.isEmpty()) {
                         articles.clear();
                     }
-                    articles = response.body().getArticles();
+                    articles = response.body().getArticles().subList(0, 10);
 
-                    adapter = new Adapter(articles, MainActivity.this);
+                    adapter = new RecyclerViewAdapter(articles, MainActivity.this);
                     recyclerView.setAdapter(adapter);
                     adapter.notifyDataSetChanged();
 
                     initListener();
+                    initLoader();
                     swipeRefreshLayout.setRefreshing(false);
                 } else {
                     swipeRefreshLayout.setRefreshing(false);
-                    Toast.makeText(MainActivity.this, "No news results.", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(MainActivity.this, "Error. No news results!", Toast.LENGTH_SHORT).show();
                 }
             }
 
             @Override
-            public void onFailure(Call<News> call, Throwable t) {
-
-            }
+            public void onFailure(Call<News> call, Throwable t) { }
         });
     }
 
@@ -105,7 +113,6 @@ public class MainActivity extends AppCompatActivity implements SwipeRefreshLayou
      */
     private void initListener() {
         adapter.setOnItemClickListener((view, position) -> {
-            ImageView imageView = view.findViewById(R.id.image);
             Intent intent = new Intent(MainActivity.this, ArticleActivity.class);
 
             Article article = articles.get(position);
@@ -117,6 +124,47 @@ public class MainActivity extends AppCompatActivity implements SwipeRefreshLayou
             intent.putExtra("author", article.getAuthor());
 
             startActivity(intent);
+        });
+    }
+
+    /**
+     * Sets an OnScrollChangedListener() to load additional articles.
+     */
+    private void initLoader() {
+        nestedScrollView.getViewTreeObserver().addOnScrollChangedListener(() -> {
+            View view = nestedScrollView.getChildAt(nestedScrollView.getChildCount() - 1);
+
+            int diff = (view.getBottom() - (nestedScrollView.getHeight() + nestedScrollView.getScrollY()));
+            if (diff == 0) {
+                handler.postDelayed(() -> {
+                    int end = articles.size() + 10;
+
+                    Call<News> call;
+                    call = getDataService.getNews(country, API_KEY);
+                    call.enqueue(new Callback<News>() {
+                        @Override
+                        public void onResponse(Call<News> call, Response<News> response) {
+                            assert response.body() != null;
+                            if (response.isSuccessful() && response.body().getArticles() != null) {
+                                articles.clear();
+
+                                List<Article> responseArticles = response.body().getArticles();
+                                if (end < responseArticles.size()) {
+                                    responseArticles = responseArticles.subList(0, end);
+                                }
+
+                                articles.addAll(responseArticles);
+                                adapter.notifyDataSetChanged();
+                            } else {
+                                Toast.makeText(MainActivity.this, "Error. No news results!", Toast.LENGTH_SHORT).show();
+                            }
+                        }
+
+                        @Override
+                        public void onFailure(Call<News> call, Throwable t) { }
+                    });
+                }, 2000);
+            }
         });
     }
 }
